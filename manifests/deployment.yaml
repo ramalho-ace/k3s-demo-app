@@ -21,4 +21,4 @@ spec:
         # Imagem do Artifact Registry
         image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/python-app:latest
         ports:
-        - containerPort: 80
+        - containerPort: 8080
