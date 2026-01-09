@@ -12,10 +12,8 @@ spec:
       labels:
         app: demo-app
     spec:
-      imagePullSecrets:
-      - name: artifact-registry-secret
       containers:
       - name: demo
-        image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/python-app:latest
+        image: nginx:latest
         ports:
         - containerPort: 80
