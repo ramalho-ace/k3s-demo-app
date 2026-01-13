@@ -1,10 +1,10 @@
 # k3s-demo-app (demo)
 
-Demo simples com Redis e PostgreSQL e um backend Flask que expõe um contador de cliques.
+Demo simples com PostgreSQL e um backend Flask que expõe um contador de cliques.
 
 Arquivos principais:
 - `app/` - código do backend (Flask) e `Dockerfile`.
-- `manifests/` - manifests Kubernetes para `postgres`, `redis` e `demo-app`.
+- `manifests/` - manifests Kubernetes para `postgres` e `demo-app`.
 
 Como testar localmente (ex.: k3s ou minikube):
 
@@ -33,7 +33,7 @@ kubectl apply -f manifests/
 
 Observações:
 - O banco Postgres usa credenciais de demonstração `demo/demo`; em produção, troque por Secrets e PVCs.
-- Redis está incluído como serviço, mas o backend demo escreve/ler apenas no Postgres.
+- O backend demo lê e grava diretamente no Postgres.
 
 Script de build & push
 ----------------------
