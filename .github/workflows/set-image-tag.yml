@@ -24,6 +24,7 @@ jobs:
       run: |
         echo "Using tag: $TAG"
         set -euo pipefail
+        
         # install yq (mikefarah) to edit YAML safely
         YQ=/usr/bin/yq
         if [ ! -x "$YQ" ]; then
@@ -31,17 +32,29 @@ jobs:
           chmod +x /usr/bin/yq
         fi
 
-        IMAGE_BASE="southamerica-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/offshore-hub-repo/demo-app"
+        PROJECT_ID="offshore-hub-foundations"
+        IMAGE_BASE="southamerica-east1-docker.pkg.dev/${PROJECT_ID}/offshore-hub-repo/demo-app"
+        IMAGE_TAG="${IMAGE_BASE}:${TAG}"
+
+        echo "Image tag: $IMAGE_TAG"
 
         # Update deployment.yaml: set the container image for demo-app
-        /usr/bin/yq eval --inplace "(.spec.template.spec.containers[] | select(.name == \"demo-app\") .image) = \"${IMAGE_BASE}:${TAG}\"" manifests/deployment.yaml
+        /usr/bin/yq eval --inplace "(.spec.template.spec.containers[] | select(.name == \"demo-app\") | .image) = \"${IMAGE_TAG}\"" manifests/deployment.yaml
 
-        # Update cloudbuild.yaml: set images[0] and any args entries that match the base image
-        /usr/bin/yq eval --inplace "(.images[0]) = \"${IMAGE_BASE}:${TAG}\"" cloudbuild.yaml
-        # update args lists where the image string appears
-        /usr/bin/yq eval --inplace "(.steps[]?.args[]?) |= (select(. == \"${IMAGE_BASE}:latest\") // .)" cloudbuild.yaml || true
-        # ensure any remaining literal occurrences are replaced safely
-        /usr/bin/yq eval --inplace "(.steps[]?.args[]?) |= sub(\"${IMAGE_BASE}(:|@)[^\"]*\", \"${IMAGE_BASE}:${TAG}\")" cloudbuild.yaml || true
+        # Update cloudbuild.yaml: set all occurrences of the image
+        # 1. Update images array
+        /usr/bin/yq eval --inplace "(.images[0]) = \"${IMAGE_TAG}\"" cloudbuild.yaml
+        
+        # 2. Update all args in steps that contain the base image string
+        /usr/bin/yq eval --inplace "(.steps[].args[]) |= sub(\"${IMAGE_BASE}:[^ ]*\", \"${IMAGE_TAG}\")" cloudbuild.yaml || true
+
+        echo "=== Updated deployment.yaml ==="
+        /usr/bin/yq eval '.spec.template.spec.containers[].image' manifests/deployment.yaml
+        
+        echo "=== Updated cloudbuild.yaml ==="
+        /usr/bin/yq eval '.images[]' cloudbuild.yaml
+        /usr/bin/yq eval '.steps[].args[]' cloudbuild.yaml | grep demo-app || echo "no demo-app in args"
+        
         git status --porcelain
 
     - name: Commit and push to production
