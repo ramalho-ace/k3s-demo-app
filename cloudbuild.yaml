@@ -1,5 +1,21 @@
 steps:
 - name: 'gcr.io/cloud-builders/docker'
+  args:
+  - build
+  - -t
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+  - ./app
+- name: 'gcr.io/cloud-builders/docker'
+  args:
+  - push
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+images:
+- 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+
+options:
+  logging: CLOUD_LOGGING_ONLY
+steps:
+- name: 'gcr.io/cloud-builders/docker'
   args: ['build', '-t', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:afdf841-1768313512 './app']
 - name: 'gcr.io/cloud-builders/docker'
   args: ['push', 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:afdf841-1768313512
