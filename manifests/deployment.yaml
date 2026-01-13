@@ -18,11 +18,19 @@ spec:
       - name: artifact-registry-secret
       containers:
       - name: demo-app
-        image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/python-app:latest
-        imagePullPolicy: IfNotPresent  # ✅ CORRIGIDO
+        image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/demo-app:latest
+        imagePullPolicy: Always
         env:
         - name: PORT
           value: "8090"
+        - name: POSTGRES_HOST
+          value: "postgres"
+        - name: POSTGRES_DB
+          value: "demo"
+        - name: POSTGRES_USER
+          value: "demo"
+        - name: POSTGRES_PASSWORD
+          value: "demo"
         ports:
         - name: http
           containerPort: 8090
