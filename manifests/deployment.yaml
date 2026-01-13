@@ -14,8 +14,6 @@ spec:
       labels:
         app: demo-app
     spec:
-      imagePullSecrets:
-      - name: artifact-registry-secret
       containers:
       - name: demo-app
         image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/demo-app:latest
