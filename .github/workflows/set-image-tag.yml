@@ -63,8 +63,15 @@ jobs:
       run: |
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"
+        
+        # Checkout production branch
+        git fetch origin production:production || git branch production origin/production
+        git checkout production
+        
+        # Stage changes from main
         git add manifests/deployment.yaml cloudbuild.yaml || true
+        
         git commit -m "ci: set image tag to ${TAG}" || echo "no changes to commit"
         
         # Push to production branch
-        git push origin HEAD:production
+        git push origin production
