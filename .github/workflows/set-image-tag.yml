@@ -1,0 +1,38 @@
+name: Generate image tag and update manifests
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  set-tag:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Generate tag
+      id: gen
+      run: |
+        SHORT=$(git rev-parse --short=7 HEAD)
+        TAG="${SHORT}-$(date +%s)"
+        echo "TAG=$TAG" >> $GITHUB_ENV
+
+    - name: Update manifests with tag
+      run: |
+        echo "Using tag: $TAG"
+        # Replace image occurrences (handles :tag or @sha)
+        sed -E -i "s|(southamerica-east1-docker.pkg.dev/[^[:space:]]+/offshore-hub-repo/demo-app)([:@][^[:space:]]+)?|\1:${TAG}|g" manifests/deployment.yaml cloudbuild.yaml || true
+        git status --porcelain
+
+    - name: Commit and push
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        git config user.email "github-actions[bot]@users.noreply.github.com"
+        git config user.name "github-actions[bot]"
+        git add manifests/deployment.yaml cloudbuild.yaml || true
+        git commit -m "ci: set image tag to ${TAG}" || echo "no changes to commit"
+        git push
