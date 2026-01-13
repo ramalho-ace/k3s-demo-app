@@ -27,8 +27,25 @@ jobs:
     - name: Update manifests with tag
       run: |
         echo "Using tag: $TAG"
-        # Replace image occurrences (handles :tag or @sha)
-        sed -E -i "s|(southamerica-east1-docker.pkg.dev/[^[:space:]]+/offshore-hub-repo/demo-app)([:@][^[:space:]]+)?|\1:${TAG}|g" manifests/deployment.yaml cloudbuild.yaml || true
+        set -euo pipefail
+        # install yq (mikefarah) to edit YAML safely
+        YQ=/usr/bin/yq
+        if [ ! -x "$YQ" ]; then
+          curl -sSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o /usr/bin/yq
+          chmod +x /usr/bin/yq
+        fi
+
+        IMAGE_BASE="southamerica-east1-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/offshore-hub-repo/demo-app"
+
+        # Update deployment.yaml: set the container image for demo-app
+        /usr/bin/yq eval --inplace "(.spec.template.spec.containers[] | select(.name == \"demo-app\") .image) = \"${IMAGE_BASE}:${TAG}\"" manifests/deployment.yaml
+
+        # Update cloudbuild.yaml: set images[0] and any args entries that match the base image
+        /usr/bin/yq eval --inplace "(.images[0]) = \"${IMAGE_BASE}:${TAG}\"" cloudbuild.yaml
+        # update args lists where the image string appears
+        /usr/bin/yq eval --inplace "(.steps[]?.args[]?) |= (select(. == \"${IMAGE_BASE}:latest\") // .)" cloudbuild.yaml || true
+        # ensure any remaining literal occurrences are replaced safely
+        /usr/bin/yq eval --inplace "(.steps[]?.args[]?) |= sub(\"${IMAGE_BASE}(:|@)[^\"]*\", \"${IMAGE_BASE}:${TAG}\")" cloudbuild.yaml || true
         git status --porcelain
 
     - name: Commit and push
