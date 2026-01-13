@@ -22,40 +22,9 @@ jobs:
 
     - name: Update manifests with tag
       run: |
-        echo "Using tag: $TAG"
-        set -euo pipefail
-        
-        # install yq (mikefarah) to edit YAML safely
-        YQ=/usr/bin/yq
-        if [ ! -x "$YQ" ]; then
-          curl -sSL "https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64" -o /usr/bin/yq
-          chmod +x /usr/bin/yq
-        fi
-
-        PROJECT_ID="offshore-hub-foundations"
-        IMAGE_BASE="southamerica-east1-docker.pkg.dev/${PROJECT_ID}/offshore-hub-repo/demo-app"
-        IMAGE_TAG="${IMAGE_BASE}:${TAG}"
-
-        echo "Image tag: $IMAGE_TAG"
-
-        # Update deployment.yaml: set the container image for demo-app
-        /usr/bin/yq eval --inplace "(.spec.template.spec.containers[] | select(.name == \"demo-app\") | .image) = \"${IMAGE_TAG}\"" manifests/deployment.yaml
-
-        # Update cloudbuild.yaml: set all occurrences of the image
-        # 1. Update images array
-        /usr/bin/yq eval --inplace "(.images[0]) = \"${IMAGE_TAG}\"" cloudbuild.yaml
-        
-        # 2. Update all args in steps that contain the base image string
-        /usr/bin/yq eval --inplace "(.steps[].args[]) |= sub(\"${IMAGE_BASE}:[^ ]*\", \"${IMAGE_TAG}\")" cloudbuild.yaml || true
-
-        echo "=== Updated deployment.yaml ==="
-        /usr/bin/yq eval '.spec.template.spec.containers[].image' manifests/deployment.yaml
-        
-        echo "=== Updated cloudbuild.yaml ==="
-        /usr/bin/yq eval '.images[]' cloudbuild.yaml
-        /usr/bin/yq eval '.steps[].args[]' cloudbuild.yaml | grep demo-app || echo "no demo-app in args"
-        
-        git status --porcelain
+        echo "Replacing :latest with :$TAG"
+        sed -i "s/:latest/:${TAG}/g" manifests/deployment.yaml cloudbuild.yaml
+        git status
 
     - name: Commit and push to production
       env:
@@ -63,20 +32,7 @@ jobs:
       run: |
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"
-        
-        # Stash changes before switching branches
-        git stash
-        
-        # Fetch and checkout production branch
-        git fetch origin production:production || true
         git checkout production
-        
-        # Apply stashed changes
-        git stash pop || true
-        
-        # Commit changes
-        git add manifests/deployment.yaml cloudbuild.yaml || true
-        git commit -m "ci: set image tag to ${TAG}" || echo "no changes to commit"
-        
-        # Push to production branch
+        git add manifests/deployment.yaml cloudbuild.yaml
+        git commit -m "ci: set image tag to ${TAG}" || echo "no changes"
         git push origin production
