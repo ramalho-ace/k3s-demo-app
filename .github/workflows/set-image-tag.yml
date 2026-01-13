@@ -3,6 +3,10 @@ name: Generate image tag and update manifests
 on:
   push:
     branches: [ main ]
+    paths:
+      - 'app/**'
+      - 'Dockerfile'
+      - 'app/*'
 
 jobs:
   set-tag:
