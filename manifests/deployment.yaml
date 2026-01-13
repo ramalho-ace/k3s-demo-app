@@ -21,7 +21,7 @@ spec:
       containers:
       - name: demo-app
         image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/python-app:latest
-        imagePullPolicy: iFNotPresent
+        imagePullPolicy: IfNotPresent
         
         ports:
         - name: http
