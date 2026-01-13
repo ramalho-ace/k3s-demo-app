@@ -34,18 +34,3 @@ kubectl apply -f manifests/
 Observações:
 - O banco Postgres usa credenciais de demonstração `demo/demo`; em produção, troque por Secrets e PVCs.
 - O backend demo lê e grava diretamente no Postgres.
-
-Script de build & push
-----------------------
-
-Se preferir usar um script local para build e push para o Artifact Registry, há um utilitário no repositório:
-
-- `build-and-push.sh` — builda a imagem e faz push para `REGION-docker.pkg.dev/PROJECT/REPO/IMAGE:TAG`.
-
-Uso:
-
-```bash
-chmod +x build-and-push.sh
-./build-and-push.sh [VERSION]
-```
-
