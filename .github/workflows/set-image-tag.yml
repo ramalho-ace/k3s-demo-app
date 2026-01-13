@@ -8,22 +8,29 @@ jobs:
   set-tag:
     if: github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
+
     steps:
-    - uses: actions/checkout@v4
+    - name: Checkout main
+      uses: actions/checkout@v4
       with:
         fetch-depth: 0
 
+    - name: Reset production to main
+      run: |
+        git fetch origin
+        git checkout production || git checkout -b production
+        git reset --hard origin/main
+
     - name: Generate tag
-      id: gen
       run: |
         SHORT=$(git rev-parse --short=7 HEAD)
         TAG="${SHORT}-$(date +%s)"
         echo "TAG=$TAG" >> $GITHUB_ENV
+        echo "Generated tag: $TAG"
 
     - name: Update manifests with tag
       run: |
-        echo "Replacing :latest with :$TAG"
-        sed -i "s/:latest/:${TAG}/g" manifests/deployment.yaml cloudbuild.yaml
+        sed -i "s/:latest/:${TAG}/g" cloudbuild.yaml manifests/deployment.yaml
         git status
 
     - name: Commit and push to production
@@ -32,6 +39,6 @@ jobs:
       run: |
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"
-        git add manifests/deployment.yaml cloudbuild.yaml
-        git commit -m "ci: set image tag to ${TAG}" || echo "no changes"
-        git push origin main:production
+        git add cloudbuild.yaml manifests/deployment.yaml
+        git commit -m "ci: set image tag to ${TAG}"
+        git push origin production --force
