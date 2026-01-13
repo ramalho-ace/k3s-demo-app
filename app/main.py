@@ -3,7 +3,6 @@ import time
 from flask import Flask, jsonify, request
 import psycopg2
 from psycopg2.extras import RealDictCursor
-import redis as redis_lib
 
 app = Flask(__name__)
 
@@ -11,8 +10,6 @@ DB_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 DB_NAME = os.environ.get("POSTGRES_DB", "demo")
 DB_USER = os.environ.get("POSTGRES_USER", "demo")
 DB_PASS = os.environ.get("POSTGRES_PASSWORD", "demo")
-REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
-REDIS_TTL = int(os.environ.get("REDIS_TTL", 60))
 
 
 def get_conn():
@@ -44,42 +41,18 @@ def ensure_table():
     conn.close()
 
 
-  def get_redis():
-    try:
-      r = redis_lib.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
-      # quick ping to ensure connection
-      r.ping()
-      return r
-    except Exception:
-      return None
+  # Redis cache removed — backend uses PostgreSQL only
 
 
 @app.route("/count", methods=["GET"])
 def get_count():
-  # Try cache first
-  r = get_redis()
-  if r:
-    try:
-      cached = r.get('click_count')
-      if cached is not None:
-        return jsonify({"count": int(cached)})
-    except Exception:
-      pass
-
   conn = get_conn()
   cur = conn.cursor(cursor_factory=RealDictCursor)
   cur.execute("SELECT count FROM clicks WHERE id = 1")
   row = cur.fetchone()
   cur.close()
   conn.close()
-
-  value = row["count"] if row else 0
-  if r:
-    try:
-      r.set('click_count', int(value), ex=REDIS_TTL)
-    except Exception:
-      pass
-  return jsonify({"count": value})
+  return jsonify({"count": row["count"] if row else 0})
 
 
 @app.route("/inc", methods=["POST"])
@@ -97,14 +70,6 @@ def inc_count():
   conn.commit()
   cur.close()
   conn.close()
-
-  # update cache
-  r = get_redis()
-  if r:
-    try:
-      r.set('click_count', int(new), ex=REDIS_TTL)
-    except Exception:
-      pass
 
   return jsonify({"count": new})
 
