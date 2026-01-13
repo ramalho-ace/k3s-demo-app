@@ -3,12 +3,12 @@ steps:
   args:
   - build
   - -t
-  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:b6997a8-1768330125'
   - ./app
 - name: 'gcr.io/cloud-builders/docker'
   args:
   - push
-  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+  - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:b6997a8-1768330125'
 
 options:
   logging: CLOUD_LOGGING_ONLY

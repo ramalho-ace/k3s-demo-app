@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: demo-app
-        image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/demo-app:latest
+        image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/demo-app:b6997a8-1768330125
         imagePullPolicy: IfNotPresent
         env:
         - name: PORT
