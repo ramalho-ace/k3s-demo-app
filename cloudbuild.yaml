@@ -9,8 +9,8 @@ steps:
   args:
   - push
   - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
-images:
-- 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
+# images:
+# - 'southamerica-east1-docker.pkg.dev/$PROJECT_ID/offshore-hub-repo/demo-app:latest'
 
 options:
   logging: CLOUD_LOGGING_ONLY
