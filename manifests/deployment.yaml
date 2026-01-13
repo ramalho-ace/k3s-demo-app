@@ -19,7 +19,7 @@ spec:
       containers:
       - name: demo-app
         image: southamerica-east1-docker.pkg.dev/offshore-hub-foundations/offshore-hub-repo/demo-app:latest
-        imagePullPolicy: Always
+        imagePullPolicy: IfNotPresent
         env:
         - name: PORT
           value: "8090"
