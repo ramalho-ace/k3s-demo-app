@@ -3,6 +3,7 @@ import time
 from flask import Flask, jsonify, request
 import psycopg2
 from psycopg2.extras import RealDictCursor
+import redis as redis_lib
 
 app = Flask(__name__)
 
@@ -10,6 +11,8 @@ DB_HOST = os.environ.get("POSTGRES_HOST", "postgres")
 DB_NAME = os.environ.get("POSTGRES_DB", "demo")
 DB_USER = os.environ.get("POSTGRES_USER", "demo")
 DB_PASS = os.environ.get("POSTGRES_PASSWORD", "demo")
+REDIS_HOST = os.environ.get("REDIS_HOST", "redis")
+REDIS_TTL = int(os.environ.get("REDIS_TTL", 60))
 
 
 def get_conn():
@@ -41,61 +44,130 @@ def ensure_table():
     conn.close()
 
 
+  def get_redis():
+    try:
+      r = redis_lib.Redis(host=REDIS_HOST, port=6379, db=0, decode_responses=True)
+      # quick ping to ensure connection
+      r.ping()
+      return r
+    except Exception:
+      return None
+
+
 @app.route("/count", methods=["GET"])
 def get_count():
-    conn = get_conn()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute("SELECT count FROM clicks WHERE id = 1")
-    row = cur.fetchone()
-    cur.close()
-    conn.close()
-    return jsonify({"count": row["count"] if row else 0})
+  # Try cache first
+  r = get_redis()
+  if r:
+    try:
+      cached = r.get('click_count')
+      if cached is not None:
+        return jsonify({"count": int(cached)})
+    except Exception:
+      pass
+
+  conn = get_conn()
+  cur = conn.cursor(cursor_factory=RealDictCursor)
+  cur.execute("SELECT count FROM clicks WHERE id = 1")
+  row = cur.fetchone()
+  cur.close()
+  conn.close()
+
+  value = row["count"] if row else 0
+  if r:
+    try:
+      r.set('click_count', int(value), ex=REDIS_TTL)
+    except Exception:
+      pass
+  return jsonify({"count": value})
 
 
 @app.route("/inc", methods=["POST"])
 def inc_count():
-    conn = get_conn()
-    cur = conn.cursor()
-    cur.execute("SELECT count FROM clicks WHERE id = 1 FOR UPDATE")
-    row = cur.fetchone()
-    if row is None:
-        cur.execute("INSERT INTO clicks (id, count) VALUES (1, 1)")
-        new = 1
-    else:
-        new = row[0] + 1
-        cur.execute("UPDATE clicks SET count = %s WHERE id = 1", (new,))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({"count": new})
+  conn = get_conn()
+  cur = conn.cursor()
+  cur.execute("SELECT count FROM clicks WHERE id = 1 FOR UPDATE")
+  row = cur.fetchone()
+  if row is None:
+    cur.execute("INSERT INTO clicks (id, count) VALUES (1, 1)")
+    new = 1
+  else:
+    new = row[0] + 1
+    cur.execute("UPDATE clicks SET count = %s WHERE id = 1", (new,))
+  conn.commit()
+  cur.close()
+  conn.close()
+
+  # update cache
+  r = get_redis()
+  if r:
+    try:
+      r.set('click_count', int(new), ex=REDIS_TTL)
+    except Exception:
+      pass
+
+  return jsonify({"count": new})
 
 
 @app.route("/", methods=["GET"])
 def index():
     return """
 <!doctype html>
-<html>
+<html lang="pt-br">
   <head>
     <meta charset='utf-8'/>
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>Click Counter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
   </head>
-  <body>
-    <h1>Click Counter (Postgres)</h1>
-    <div>
-      <button id="btn">Click me</button>
-      <span id="count">...</span>
-    </div>
+  <body class="bg-gradient-to-br from-sky-50 to-indigo-50 min-h-screen flex items-center justify-center">
+    <main class="max-w-xl w-full p-6">
+      <div class="bg-white/80 backdrop-blur-md shadow-lg rounded-2xl p-8">
+        <header class="flex items-center justify-between mb-6">
+          <h1 class="text-2xl font-semibold text-slate-800">Contador de Cliques</h1>
+          <span class="text-sm text-slate-500">Postgres demo</span>
+        </header>
+
+        <section class="text-center">
+          <div class="text-6xl font-extrabold text-indigo-600 mb-4" id="count">...</div>
+          <p class="text-sm text-slate-500 mb-6">Clique no botão para incrementar o contador persistido no PostgreSQL.</p>
+          <div class="flex items-center justify-center gap-4">
+            <button id="btn" class="px-6 py-3 rounded-full bg-indigo-600 text-white shadow hover:bg-indigo-700 active:scale-95 transition">Clique</button>
+            <button id="reset" class="px-4 py-2 rounded-lg border border-slate-200 text-slate-700 bg-white hover:bg-slate-50">Atualizar</button>
+          </div>
+        </section>
+
+        <footer class="mt-6 text-xs text-slate-400 text-center">Demo simples — não usar em produção sem ajustes</footer>
+      </div>
+    </main>
+
     <script>
       async function refresh() {
-        const res = await fetch('/count');
-        const j = await res.json();
-        document.getElementById('count').textContent = j.count;
+        try {
+          const res = await fetch('/count');
+          const j = await res.json();
+          document.getElementById('count').textContent = j.count;
+        } catch (err) {
+          document.getElementById('count').textContent = '—';
+        }
       }
+
       document.getElementById('btn').addEventListener('click', async () => {
-        const res = await fetch('/inc', {method: 'POST'});
-        const j = await res.json();
-        document.getElementById('count').textContent = j.count;
+        const btn = document.getElementById('btn');
+        btn.disabled = true;
+        try {
+          const res = await fetch('/inc', {method: 'POST'});
+          const j = await res.json();
+          document.getElementById('count').textContent = j.count;
+        } catch (err) {
+          console.error(err);
+        } finally {
+          btn.disabled = false;
+        }
       });
+
+      document.getElementById('reset').addEventListener('click', () => refresh());
+
       refresh();
     </script>
   </body>
