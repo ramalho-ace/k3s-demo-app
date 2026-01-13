@@ -48,7 +48,7 @@ jobs:
         /usr/bin/yq eval --inplace "(.steps[]?.args[]?) |= sub(\"${IMAGE_BASE}(:|@)[^\"]*\", \"${IMAGE_BASE}:${TAG}\")" cloudbuild.yaml || true
         git status --porcelain
 
-    - name: Commit and push
+    - name: Commit and push to production
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: |
@@ -56,4 +56,6 @@ jobs:
         git config user.name "github-actions[bot]"
         git add manifests/deployment.yaml cloudbuild.yaml || true
         git commit -m "ci: set image tag to ${TAG}" || echo "no changes to commit"
-        git push
+        
+        # Push to production branch
+        git push origin HEAD:production
