@@ -49,17 +49,3 @@ chmod +x build-and-push.sh
 ./build-and-push.sh [VERSION]
 ```
 
-Exemplo (usa `latest` por padrão):
-
-```bash
-./build-and-push.sh
-```
-
-O script já vem pré-configurado com:
-
-- `PROJECT_ID="offshore-hub-foundations"`
-- `REGION="southamerica-east1"`
-- `REPO_NAME="offshore-hub-repo"`
-- `IMAGE_NAME="python-app"`
-
-Altere as variáveis no início do script se necessário.
