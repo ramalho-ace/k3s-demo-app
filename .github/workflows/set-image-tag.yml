@@ -64,13 +64,18 @@ jobs:
         git config user.email "github-actions[bot]@users.noreply.github.com"
         git config user.name "github-actions[bot]"
         
-        # Checkout production branch
-        git fetch origin production:production || git branch production origin/production
+        # Stash changes before switching branches
+        git stash
+        
+        # Fetch and checkout production branch
+        git fetch origin production:production || true
         git checkout production
         
-        # Stage changes from main
-        git add manifests/deployment.yaml cloudbuild.yaml || true
+        # Apply stashed changes
+        git stash pop || true
         
+        # Commit changes
+        git add manifests/deployment.yaml cloudbuild.yaml || true
         git commit -m "ci: set image tag to ${TAG}" || echo "no changes to commit"
         
         # Push to production branch
